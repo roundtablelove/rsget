@@ -1,0 +1,78 @@
+# Copy of ci.yml with the Install Nix / Restore-and-cache-Nix-store
+# steps swapped for the nix-seed action, everything else unchanged, so
+# the two workflows' wall-clock time can be compared directly on the
+# same jobs.
+#
+# paths-ignore mirrors what Seed watches: a seed-affecting push goes
+# push -> Seed -> workflow_run -> here, so this never races ahead of
+# the seed it needs. A change that doesn't touch the closure still
+# runs directly on push, same as ci.yml.
+name: "Seed Build"
+
+on:
+  pull_request_target:
+  merge_group:
+  push:
+    branches:
+      - "master"
+    paths-ignore:
+      - flake.nix
+      - flake.lock
+      - Cargo.lock
+      - Cargo.toml
+      - package.nix
+      - devshell.nix
+      - .github/workflows/seed.yml
+  workflow_run:
+    workflows:
+      - Seed
+    types:
+      - completed
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  nix-matrix:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Mount seed
+        uses: roundtablelove/nix-seed@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - id: set-matrix
+        name: Generate Nix Matrix
+        run: |
+          set -euo pipefail
+
+          matrix="$(nix eval --json '.#githubActions.matrix')"
+          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+
+  nix-check:
+    needs: nix-matrix
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJSON(needs.nix-matrix.outputs.matrix) }}
+    permissions:
+      contents: read
+      id-token: write
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+      - name: Mount seed
+        uses: roundtablelove/nix-seed@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - run: nix build -L ".#${{ matrix.attr }}" --keep-going
+      - run: nix develop -c cargo test
