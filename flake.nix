@@ -34,6 +34,17 @@
       packages.${system}.seed = inputs.nix-seed.lib.mkSeed {
         pkgs = import inputs.nixpkgs { inherit system; };
         inherit (inputs) self;
+        # blueprint's "pkgs-<name>"/"devshell-<name>" checks are the
+        # same derivations as packages/devShells, just re-keyed (see
+        # numtide/blueprint's lib/default.nix, withPrefix) -- so naming
+        # the primitives here also covers what seed-build.yml's
+        # `nix build .#checks.x86_64-linux."pkgs-default"` and
+        # `"...devshell-default"` need. devShells.default also covers
+        # the unconditional `nix develop -c cargo test` step.
+        seedOutputs = [
+          "packages.default"
+          "devShells.default"
+        ];
       };
       # blueprint derives a "pkgs-<name>" check per package from self
       # (a fixed point), so adding packages.${system}.seed above also
