@@ -1,7 +1,7 @@
 {
   "repository": "ghcr.io/roundtablelove/rsget/seed",
   "systems": {
-    "x86_64-linux": "sha256:7fa964744155f7cf2bb5ef63095d89090e182b069857bed63d55bdc3a14d4ab5"
+    "x86_64-linux": "sha256:db11bb5a4b2ae04b520b02b1cbbaa6fde2e966ee67080a483519f2b5132aacf9"
   },
-  "tag": "e259601e9c97a383e9431ba728f3ffdc5847ba47"
+  "tag": "f3224f5e26fcea78f4f01b9c0c2d3be803c2a482"
 }
